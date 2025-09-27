@@ -9,14 +9,15 @@ import 'package:my_app/ui/now_playing/audio_player_manager.dart';
 import '../../data/model/song.dart';
 
 class NowPlaying extends StatelessWidget {
-  const NowPlaying({super.key, required this.playingSong, required this.songs});
+  const NowPlaying({super.key, required this.playingSong, required this.songs,required this.favoriteSongs,required this.onFavoriteChanged,});
 
   final Song playingSong;
   final List<Song> songs;
-
+  final List<Song> favoriteSongs;
+  final Function(Song, bool) onFavoriteChanged;
   @override
   Widget build(BuildContext context) {
-    return NowPlayingPage(songs: songs, playingSong: playingSong);
+    return NowPlayingPage(songs: songs, playingSong: playingSong,favoriteSongs: favoriteSongs,onFavoriteChanged: onFavoriteChanged, );
   }
 }
 
@@ -25,10 +26,14 @@ class NowPlayingPage extends StatefulWidget {
     super.key,
     required this.playingSong,
     required this.songs,
+    required this.favoriteSongs,
+    required this.onFavoriteChanged,
   });
 
   final Song playingSong;
   final List<Song> songs;
+  final List<Song> favoriteSongs;
+  final Function(Song, bool) onFavoriteChanged;
 
   @override
   State<NowPlayingPage> createState() => _NowPlayingPageState();
@@ -38,17 +43,20 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _imageAnimController;
   late AudioPlayerManager _audioPlayerManager;
-  late int _selectedItemIndex ;
+  late int _selectedItemIndex;
+
   late Song _song;
-  late double _currentAnimationPosition =0.0;
+  late double _currentAnimationPosition = 0.0;
   bool _isShuffle = false;
   late LoopMode _loopMode;
+  bool isFavorite = false;
+  double scale = 1.0;
 
   @override
   void initState() {
     super.initState();
-    _currentAnimationPosition =0.0;
-    _song =widget.playingSong;
+    _currentAnimationPosition = 0.0;
+    _song = widget.playingSong;
     _imageAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 12000),
@@ -57,11 +65,11 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _audioPlayerManager.updateSong(_song);
     });
-    if(_audioPlayerManager.songUrl.compareTo(_song.source) != 0){
+    if (_audioPlayerManager.songUrl.compareTo(_song.source) != 0) {
       _audioPlayerManager.updateSongUrl(_song.source);
 
       _audioPlayerManager.prepare(isNewSong: true);
-    }else {
+    } else {
       _audioPlayerManager.prepare(isNewSong: false);
     }
 
@@ -135,9 +143,37 @@ class _NowPlayingPageState extends State<NowPlayingPage>
                           ],
                         ),
                         IconButton(
-                          onPressed: () {},
-                          icon: const Icon(Icons.favorite),
-                        ),
+                          onPressed: () {
+                            setState(() {
+                              _song.favorite = !_song.favorite; // đổi trạng thái ngay trong Song
+                              scale = 1.3;
+
+                              if (_song.favorite) {
+                                widget.favoriteSongs.add(_song);
+                              } else {
+                                widget.favoriteSongs.remove(_song);
+                              }
+                            });
+                            widget.onFavoriteChanged(_song, _song.favorite);
+                            Future.delayed(const Duration(milliseconds: 150), () {
+                              if (mounted) {
+                                setState(() {
+                                  scale = 1.0;
+                                });
+                              }
+                            });
+                          },
+                          icon: AnimatedScale(
+                            scale: scale,
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.easeOut,
+                            child: Icon(
+                              _song.favorite ? Icons.favorite : Icons.favorite_border,
+                              color: _song.favorite ? Colors.red : Colors.grey,
+                              size: 32,
+                            ),
+                          ),
+                        )
                       ],
                     ),
                   ),
@@ -230,7 +266,6 @@ class _NowPlayingPageState extends State<NowPlayingPage>
           thumbColor: Colors.deepPurple,
           thumbGlowColor: Colors.green.withOpacity(0.3),
           thumbRadius: 10.0,
-
         );
       },
     );
@@ -303,17 +338,17 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     );
   }
 
-
-  void _setNextSong(){
-    if(_isShuffle){
+  void _setNextSong() {
+    if (_isShuffle) {
       var random = Random();
-      _selectedItemIndex = random.nextInt(widget.songs.length -1);
-    } else if(_selectedItemIndex < widget.songs.length -1) {
+      _selectedItemIndex = random.nextInt(widget.songs.length - 1);
+    } else if (_selectedItemIndex < widget.songs.length - 1) {
       ++_selectedItemIndex;
-    } else if(_loopMode == LoopMode.all && _selectedItemIndex == widget.songs.length -1){
-      _selectedItemIndex =0;
+    } else if (_loopMode == LoopMode.all &&
+        _selectedItemIndex == widget.songs.length - 1) {
+      _selectedItemIndex = 0;
     }
-    if(_selectedItemIndex > widget.songs.length){
+    if (_selectedItemIndex > widget.songs.length) {
       _selectedItemIndex = _selectedItemIndex % widget.songs.length;
     }
     final nextSong = widget.songs[_selectedItemIndex];
@@ -323,27 +358,30 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       _song = nextSong;
     });
   }
-  void _playRotationAnim(){
+
+  void _playRotationAnim() {
     _imageAnimController.forward(from: _currentAnimationPosition);
     _imageAnimController.repeat();
   }
 
-  void _pauseRotationAnim(){
+  void _pauseRotationAnim() {
     _stopRotationAnim();
     _currentAnimationPosition = _imageAnimController.value;
   }
 
-  void _stopRotationAnim(){
+  void _stopRotationAnim() {
     _imageAnimController.stop();
   }
-  void _resetRotationAnim(){
-    _currentAnimationPosition =0.0;
+
+  void _resetRotationAnim() {
+    _currentAnimationPosition = 0.0;
     _imageAnimController.value = _currentAnimationPosition;
   }
-  void _setRepeatOption(){
-    if(_loopMode == LoopMode.off){
+
+  void _setRepeatOption() {
+    if (_loopMode == LoopMode.off) {
       _loopMode = LoopMode.one;
-    }else if (_loopMode == LoopMode.one){
+    } else if (_loopMode == LoopMode.one) {
       _loopMode = LoopMode.all;
     } else {
       _loopMode = LoopMode.off;
@@ -353,17 +391,17 @@ class _NowPlayingPageState extends State<NowPlayingPage>
     });
   }
 
-  void _setPrevSong(){
-    if(_isShuffle){
+  void _setPrevSong() {
+    if (_isShuffle) {
       var random = Random();
-      _selectedItemIndex = random.nextInt(widget.songs.length -1);
-    } else if(_selectedItemIndex > 0) {
+      _selectedItemIndex = random.nextInt(widget.songs.length - 1);
+    } else if (_selectedItemIndex > 0) {
       --_selectedItemIndex;
-    } else if(_loopMode == LoopMode.all && _selectedItemIndex ==0) {
-      _selectedItemIndex = widget.songs.length -1;
+    } else if (_loopMode == LoopMode.all && _selectedItemIndex == 0) {
+      _selectedItemIndex = widget.songs.length - 1;
     }
-    if(_selectedItemIndex < 0 ){
-      _selectedItemIndex =(-1 * _selectedItemIndex) % widget.songs.length;
+    if (_selectedItemIndex < 0) {
+      _selectedItemIndex = (-1 * _selectedItemIndex) % widget.songs.length;
     }
     final nextSong = widget.songs[_selectedItemIndex];
     _audioPlayerManager.updateSong(nextSong);
@@ -372,20 +410,23 @@ class _NowPlayingPageState extends State<NowPlayingPage>
       _song = nextSong;
     });
   }
-  void _setShuffle(){
+
+  void _setShuffle() {
     setState(() {
       _isShuffle = !_isShuffle;
     });
   }
-  Color? _getShuffleColor(){
+
+  Color? _getShuffleColor() {
     return _isShuffle ? Colors.deepPurple : Colors.grey;
   }
+
   Color? _getRepeatingIconColor() {
     return _loopMode == LoopMode.off ? Colors.grey : Colors.deepPurple;
   }
 
-  IconData _repeatingIcon(){
-    return switch(_loopMode){
+  IconData _repeatingIcon() {
+    return switch (_loopMode) {
       LoopMode.one => Icons.repeat_one,
       LoopMode.all => Icons.repeat_on,
       _ => Icons.repeat,

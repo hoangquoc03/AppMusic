@@ -7,8 +7,9 @@ import 'package:my_app/ui/now_playing/playing.dart';
 
 class MiniPlayer extends StatelessWidget {
   final Song song;
-
-  const MiniPlayer({super.key, required this.song});
+  final List<Song> favoriteSongs;
+  final void Function(Song, bool) onFavoriteChanged;
+  const MiniPlayer({super.key, required this.song,required this.favoriteSongs,required this.onFavoriteChanged,});
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +28,8 @@ class MiniPlayer extends StatelessWidget {
                 builder: (_) => NowPlaying(
                   songs: audioManager.playlist, // ✅ truyền cả playlist
                   playingSong: currentSong,
+                  favoriteSongs: favoriteSongs,
+                  onFavoriteChanged: onFavoriteChanged,
                 ),
               ),
             );

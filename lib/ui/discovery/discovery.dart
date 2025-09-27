@@ -15,7 +15,18 @@ class DiscoveryTab extends StatefulWidget {
 
 class _DiscoveryTabState extends State<DiscoveryTab> {
   List<Song> songs = [];
+  final List<Song> favoriteSongs = [];
   late MusicAppViewModel _viewModel;
+  void updateFavorites(Song song, bool isFavorite) {
+    setState(() {
+      if (isFavorite) {
+        favoriteSongs.add(song);
+      } else {
+        favoriteSongs.remove(song);
+      }
+    });
+  }
+
 
   @override
   void initState() {
@@ -60,6 +71,8 @@ class _DiscoveryTabState extends State<DiscoveryTab> {
           itemBuilder: (context, index) => _SongCard(
             song: songs[index],
             playlist: songs,
+              favoriteSongs: favoriteSongs,
+            onFavoriteChanged: updateFavorites,
           ),
           separatorBuilder: (_, __) => const SizedBox(height: 16),
           itemCount: songs.length,
@@ -73,8 +86,9 @@ class _DiscoveryTabState extends State<DiscoveryTab> {
 class _SongCard extends StatelessWidget {
   final Song song;
   final List<Song> playlist;
-
-  const _SongCard({required this.song, required this.playlist});
+  final List<Song> favoriteSongs;
+  final void Function(Song, bool) onFavoriteChanged;
+  const _SongCard({required this.song, required this.playlist,required this.favoriteSongs,required this.onFavoriteChanged,});
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +101,7 @@ class _SongCard extends StatelessWidget {
         Navigator.push(
           context,
           CupertinoPageRoute(
-            builder: (_) => NowPlaying(songs: playlist, playingSong: song),
+            builder: (_) => NowPlaying(songs: playlist, playingSong: song,favoriteSongs: favoriteSongs,onFavoriteChanged: onFavoriteChanged,),
           ),
         );
       },
@@ -133,6 +147,8 @@ class _SongCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                      decoration: TextDecoration.none,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -143,6 +159,7 @@ class _SongCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
+                      decoration: TextDecoration.none,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

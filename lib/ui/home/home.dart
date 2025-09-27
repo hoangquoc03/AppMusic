@@ -27,18 +27,34 @@ class MusicApp extends StatelessWidget {
     );
   }
 }
-
-class MusicHomePage extends StatelessWidget {
+class MusicHomePage extends StatefulWidget {
   const MusicHomePage({super.key});
 
+  @override
+  State<MusicHomePage> createState() => _MusicHomePageState();
+}
+
+
+class _MusicHomePageState extends State<MusicHomePage> {
+  final List<Song> favoriteSongs = [];
+  void updateFavorites(Song song, bool isFavorite) {
+    setState(() {
+      if (isFavorite) {
+        if (!favoriteSongs.contains(song)) {
+          favoriteSongs.add(song);
+        }
+      } else {
+        favoriteSongs.remove(song);
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     // Danh sách các widget cho từng tab
     final List<Widget> tabs = [
-      const HomeTab(),
+      HomeTab(favoriteSongs: favoriteSongs,onFavoriteChanged: updateFavorites,),
       const DiscoveryTab(), // Đảm bảo bạn đã định nghĩa các Widget này
-      const AccountTab(), // Đảm bảo bạn đã định nghĩa các Widget này
-      const SettingsTab(), // Đảm bảo bạn đã định nghĩa các Widget này
+      SettingsTab(favoriteSongs: favoriteSongs), // Đảm bảo bạn đã định nghĩa các Widget này
     ];
 
     return CupertinoTabScaffold(
@@ -78,16 +94,20 @@ class MusicHomePage extends StatelessWidget {
 // --- Ví dụ về các Tab Widgets (bạn cần định nghĩa chúng đầy đủ) ---
 
 class HomeTab extends StatelessWidget {
-  const HomeTab({super.key});
+  final List<Song> favoriteSongs;
+  final Function(Song, bool) onFavoriteChanged;
+  const HomeTab({super.key,required this.favoriteSongs,required this.onFavoriteChanged,});
 
   @override
   Widget build(BuildContext context) {
-    return _HomeTabPage();
+    return _HomeTabPage(favoriteSongs: favoriteSongs,onFavoriteChanged: onFavoriteChanged,);
   }
 }
 
 class _HomeTabPage extends StatefulWidget {
-  const _HomeTabPage({super.key});
+  final List<Song> favoriteSongs;
+  final Function(Song, bool) onFavoriteChanged;
+  const _HomeTabPage({super.key, required this.favoriteSongs,required this.onFavoriteChanged,});
 
   @override
   State<_HomeTabPage> createState() => _HomeTabPageState();
@@ -142,7 +162,7 @@ class _HomeTabPageState extends State<_HomeTabPage> {
                 valueListenable: AudioPlayerManager().currentSongNotifier,
                 builder: (context, song, _) {
                   if (song != null) {
-                    return MiniPlayer(song: song);
+                    return MiniPlayer(song: song,favoriteSongs: widget.favoriteSongs,onFavoriteChanged: widget.onFavoriteChanged,);
                   }
                   return const SizedBox.shrink();
                 },
@@ -262,7 +282,7 @@ class _HomeTabPageState extends State<_HomeTabPage> {
       context,
       CupertinoPageRoute(
         builder: (context) {
-          return NowPlaying(songs: songs, playingSong: song);
+          return NowPlaying(songs: songs, playingSong: song,favoriteSongs: widget.favoriteSongs,onFavoriteChanged: widget.onFavoriteChanged,);
         },
       ),
     );
